@@ -30,7 +30,7 @@ class LoginView(APIView):
 
         payload = {
             'id': user.id,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=60),
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=10),
             'iat': datetime.datetime.utcnow()
         }
 
@@ -60,12 +60,12 @@ class UserView(APIView):
         except jwt.ExpiredSignatureError:
             raise AuthenticationFailed('!No user')
 
-        online_users = User.objects.filter(id=payload['id'], is_online=True).first()
+        online_users = User.objects.filter(is_online=True)
 
         if not online_users:
             raise AuthenticationFailed('No online users found.')
 
-        serializer = UserSerializer(online_users)
+        serializer = UserSerializer(online_users,many=True)
         return Response(serializer.data)
 
 class LogoutView(APIView):
@@ -81,21 +81,13 @@ class LogoutView(APIView):
             raise AuthenticationFailed('Unauthenticated!')
 
         user = User.objects.filter(id=payload['id']).first()
-
+        user_id=payload['id']
         # Set the user as offline
         user.is_online = False
         user.save()
-
+        print(f'User with ID {user_id} logged out.')
         response = Response()
-        response.delete_cookie('jwt')
         response.data = {
             'message': 'success'
         }
         return response
-
-
-
-def current(request):
-    now = datetime.datetime.now()
-    html = "<html><body>It is now %s.</body></html>" % now
-    return HttpResponse(html)
